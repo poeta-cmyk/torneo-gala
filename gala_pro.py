@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import urllib.parse
 import json
 import os
 
@@ -25,8 +24,8 @@ st.markdown("""
         padding: 5px; border-radius: 5px; font-weight: bold; font-size: 12px; color: white; 
         display: flex; align-items: center; justify-content: center;
     }
-    .purple { background-color: #6b21a8; border: 1px solid #a855f7; } 
-    .green { background-color: #065f46; border: 1px solid #10b981; }
+    .pareja1 { background-color: #6b21a8; border: 1px solid #a855f7; } 
+    .pareja2 { background-color: #065f46; border: 1px solid #10b981; }
     .mesa-center { 
         grid-column: 2; grid-row: 2; background: #334155; border: 2px dashed #fbbf24; 
         border-radius: 50%; display: flex; align-items: center; justify-content: center; 
@@ -58,7 +57,7 @@ def cargar():
 
 if 'datos' not in st.session_state: st.session_state.datos = cargar()
 
-# 4. LÓGICA DE RONDAS
+# 4. LÓGICA DE RONDAS (Parejas: J0-J1 contra J2-J3)
 def obtener_ronda(r):
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
@@ -98,8 +97,9 @@ with tabs[0]:
     def fila(num, jug):
         st.markdown(f"**MESA {num}**")
         c1, c2 = st.columns(2)
-        pa = c1.number_input(f"{n[jug[0]]}/{n[jug[1]]}", 0, 200, key=f"pa_{r_actual}_{num}")
-        pb = c2.number_input(f"{n[jug[2]]}/{n[jug[3]]}", 0, 200, key=f"pb_{r_actual}_{num}")
+        # El primer jugador de la lista aparece aquí como el primero de la pareja A
+        pa = c1.number_input(f"{n[jug[0]]} / {n[jug[1]]}", 0, 200, key=f"pa_{r_actual}_{num}")
+        pb = c2.number_input(f"{n[jug[2]]} / {n[jug[3]]}", 0, 200, key=f"pb_{r_actual}_{num}")
         return {"r": r_actual, "j": jug, "pa": pa, "pb": pb}
     
     res = [fila(1, d["m1"]), fila(2, d["m2"]), fila(3, d["m3"])]
@@ -111,7 +111,20 @@ with tabs[0]:
 
 with tabs[1]:
     def mesa(num, jug):
-        st.markdown(f'<div class="mesa-container"><div class="pos-label purple" style="grid-column:2; grid-row:1;">{n[jug[1]]}</div><div class="pos-label green" style="grid-column:1; grid-row:2;">{n[jug[0]]}</div><div class="mesa-center">MESA {num}</div><div class="pos-label green" style="grid-column:3; grid-row:2;">{n[jug[2]]}</div><div class="pos-label purple" style="grid-column:2; grid-row:3;">{n[jug[3]]}</div></div>', unsafe_allow_html=True)
+        # ORDEN CORREGIDO:
+        # Arriba: Jug[0] (Pareja 1)
+        # Abajo: Jug[1] (Pareja 1) -> Al frente de Jug[0]
+        # Derecha: Jug[2] (Pareja 2)
+        # Izquierda: Jug[3] (Pareja 2) -> Al frente de Jug[2]
+        st.markdown(f'''
+            <div class="mesa-container">
+                <div class="pos-label pareja1" style="grid-column:2; grid-row:1;">{n[jug[0]]}</div>
+                <div class="pos-label pareja2" style="grid-column:1; grid-row:2;">{n[jug[3]]}</div>
+                <div class="mesa-center">MESA {num}</div>
+                <div class="pos-label pareja2" style="grid-column:3; grid-row:2;">{n[jug[2]]}</div>
+                <div class="pos-label pareja1" style="grid-column:2; grid-row:3;">{n[jug[1]]}</div>
+            </div>
+        ''', unsafe_allow_html=True)
     cols = st.columns(3)
     for i, m in enumerate(["m1", "m2", "m3"]): 
         with cols[i]: mesa(i+1, d[m])
