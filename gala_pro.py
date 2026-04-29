@@ -41,7 +41,7 @@ if not st.session_state.autenticado:
     with col2:
         st.title("🏆 Gala de los 13")
         clave = st.text_input("Ingrese su Clave de Acceso", type="password")
-        if clave == "1234": # Aquí puedes cambiar tu clave
+        if clave == "poeta1208": # Aquí puedes cambiar tu clave
             st.session_state.autenticado = True
             st.rerun()
         elif clave != "":
