@@ -59,7 +59,6 @@ if 'datos' not in st.session_state: st.session_state.datos = cargar()
 
 # 4. LÓGICA DE RONDAS
 def obtener_ronda(r):
-    # Parejas: jug[0] y jug[1] vs jug[2] y jug[3]
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
         2: {"desc": "j1", "m1": ["j2", "j13", "j9", "j6"], "m2": ["j3", "j12", "j4", "j11"], "m3": ["j5", "j10", "j7", "j8"]},
@@ -111,18 +110,18 @@ with tabs[0]:
 
 with tabs[1]:
     def mesa(num, jug):
-        # EL ORDEN ANTIHORARIO EXACTO SOLICITADO:
-        # 1. ARRIBA: jug[0]
-        # 2. DERECHA: jug[2]
-        # 3. ABAJO: jug[1] (Compañero de Arriba)
-        # 4. IZQUIERDA: jug[3] (Compañero de Derecha)
+        # INVERSIÓN DE FRANJAS VERDES PARA SENTIDO ANTIHORARIO:
+        # Arriba (Morado): jug[0]
+        # Derecha (Verde): jug[3] (Antes era jug[2])
+        # Abajo (Morado): jug[1]
+        # Izquierda (Verde): jug[2] (Antes era jug[3])
         st.markdown(f'''
             <div class="mesa-container">
                 <div class="pos-label pareja1" style="grid-column:2; grid-row:1;">{n[jug[0]]}</div>
-                <div class="pos-label pareja2" style="grid-column:3; grid-row:2;">{n[jug[2]]}</div>
+                <div class="pos-label pareja2" style="grid-column:3; grid-row:2;">{n[jug[3]]}</div>
                 <div class="mesa-center">MESA {num}</div>
                 <div class="pos-label pareja1" style="grid-column:2; grid-row:3;">{n[jug[1]]}</div>
-                <div class="pos-label pareja2" style="grid-column:1; grid-row:2;">{n[jug[3]]}</div>
+                <div class="pos-label pareja2" style="grid-column:1; grid-row:2;">{n[jug[2]]}</div>
             </div>
         ''', unsafe_allow_html=True)
     cols = st.columns(3)
