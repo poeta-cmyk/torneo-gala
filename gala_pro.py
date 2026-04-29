@@ -18,11 +18,11 @@ st.markdown("""
     }
     .mesa-container { 
         display: grid; grid-template-columns: 1fr 1.5fr 1fr; grid-template-rows: 1fr 1.2fr 1fr; 
-        gap: 5px; width: 260px; height: 180px; margin: 10px auto; text-align: center; 
+        gap: 5px; width: 280px; height: 200px; margin: 10px auto; text-align: center; 
     }
     .pos-label { 
-        padding: 5px; border-radius: 5px; font-weight: bold; font-size: 12px; color: white; 
-        display: flex; align-items: center; justify-content: center;
+        padding: 5px; border-radius: 5px; font-weight: bold; font-size: 13px; color: white; 
+        display: flex; align-items: center; justify-content: center; min-height: 40px;
     }
     .pareja1 { background-color: #6b21a8; border: 1px solid #a855f7; } 
     .pareja2 { background-color: #065f46; border: 1px solid #10b981; }
@@ -59,7 +59,7 @@ if 'datos' not in st.session_state: st.session_state.datos = cargar()
 
 # 4. LÓGICA DE RONDAS
 def obtener_ronda(r):
-    # Parejas: [0] con [1] vs [2] con [3]
+    # Parejas: jug[0] y jug[1] vs jug[2] y jug[3]
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
         2: {"desc": "j1", "m1": ["j2", "j13", "j9", "j6"], "m2": ["j3", "j12", "j4", "j11"], "m3": ["j5", "j10", "j7", "j8"]},
@@ -79,13 +79,13 @@ def obtener_ronda(r):
 
 # 5. SIDEBAR: NOMBRES
 with st.sidebar:
-    st.header("⚙️ NOMBRES")
+    st.header("⚙️ CONFIGURACIÓN")
     for i in range(1, 14):
         k = f"j{i}"
-        st.session_state.datos["nombres"][k] = st.text_input(f"P{i}", st.session_state.datos["nombres"][k])
-    if st.button("💾 Guardar Todo"):
+        st.session_state.datos["nombres"][k] = st.text_input(f"Jugador {i}", st.session_state.datos["nombres"][k])
+    if st.button("💾 Guardar Nombres"):
         with open(FILE, "w") as f: json.dump(st.session_state.datos, f)
-        st.success("¡Guardado!")
+        st.success("Guardado")
 
 # 6. INTERFAZ PRINCIPAL
 r_actual = st.select_slider("RONDA", options=list(range(1, 14)))
@@ -103,19 +103,19 @@ with tabs[0]:
         return {"r": r_actual, "j": jug, "pa": pa, "pb": pb}
     
     res = [fila(1, d["m1"]), fila(2, d["m2"]), fila(3, d["m3"])]
-    if st.button("🔔 REGISTRAR RONDA"):
+    if st.button("🔔 REGISTRAR RESULTADOS"):
         st.session_state.datos["puntos"] = [p for p in st.session_state.datos["puntos"] if p["r"] != r_actual]
         st.session_state.datos["puntos"].extend(res)
         with open(FILE, "w") as f: json.dump(st.session_state.datos, f)
-        st.success("Registrado")
+        st.balloons()
 
 with tabs[1]:
     def mesa(num, jug):
-        # ROTACIÓN ANTIHORARIA DESDE ARRIBA:
-        # Arriba (P1): jug[0]
-        # Derecha (P2): jug[2] 
-        # Abajo (P1): jug[1] (Compañero de jug[0])
-        # Izquierda (P2): jug[3] (Compañero de jug[2])
+        # EL ORDEN ANTIHORARIO EXACTO SOLICITADO:
+        # 1. ARRIBA: jug[0]
+        # 2. DERECHA: jug[2]
+        # 3. ABAJO: jug[1] (Compañero de Arriba)
+        # 4. IZQUIERDA: jug[3] (Compañero de Derecha)
         st.markdown(f'''
             <div class="mesa-container">
                 <div class="pos-label pareja1" style="grid-column:2; grid-row:1;">{n[jug[0]]}</div>
