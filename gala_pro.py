@@ -57,7 +57,7 @@ def cargar():
 
 if 'datos' not in st.session_state: st.session_state.datos = cargar()
 
-# 4. LÓGICA DE RONDAS (Parejas: J0-J1 contra J2-J3)
+# 4. LÓGICA DE RONDAS
 def obtener_ronda(r):
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
@@ -97,7 +97,6 @@ with tabs[0]:
     def fila(num, jug):
         st.markdown(f"**MESA {num}**")
         c1, c2 = st.columns(2)
-        # El primer jugador de la lista aparece aquí como el primero de la pareja A
         pa = c1.number_input(f"{n[jug[0]]} / {n[jug[1]]}", 0, 200, key=f"pa_{r_actual}_{num}")
         pb = c2.number_input(f"{n[jug[2]]} / {n[jug[3]]}", 0, 200, key=f"pb_{r_actual}_{num}")
         return {"r": r_actual, "j": jug, "pa": pa, "pb": pb}
@@ -111,11 +110,11 @@ with tabs[0]:
 
 with tabs[1]:
     def mesa(num, jug):
-        # ORDEN CORREGIDO:
-        # Arriba: Jug[0] (Pareja 1)
-        # Abajo: Jug[1] (Pareja 1) -> Al frente de Jug[0]
-        # Derecha: Jug[2] (Pareja 2)
-        # Izquierda: Jug[3] (Pareja 2) -> Al frente de Jug[2]
+        # GEOMETRÍA FINAL:
+        # Arriba: Fran (jug[0])
+        # Abajo: Maestro 12 (jug[1]) -> Al frente de Fran
+        # Derecha: Maestro 8 (jug[2]) -> A la derecha de Fran
+        # Izquierda: Jac (jug[3]) -> Al frente de Maestro 8
         st.markdown(f'''
             <div class="mesa-container">
                 <div class="pos-label pareja1" style="grid-column:2; grid-row:1;">{n[jug[0]]}</div>
