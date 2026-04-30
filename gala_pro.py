@@ -20,40 +20,31 @@ def cargar_db():
 if 'db' not in st.session_state:
     st.session_state.db = cargar_db()
 
-# --- 3. FLUJO DE ENTRADA (AUTENTICACIÓN + DECISIÓN) ---
-if 'auth' not in st.session_state:
-    st.session_state.auth = False
-if 'decidido' not in st.session_state:
-    st.session_state.decidido = False
+# --- 3. FLUJO DE ENTRADA ---
+if 'auth' not in st.session_state: st.session_state.auth = False
+if 'decidido' not in st.session_state: st.session_state.decidido = False
 
 if not st.session_state.auth:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<br><br><h2 style='text-align: center;'>🏆 Gala de los 13</h2>", unsafe_allow_html=True)
-        clave = st.text_input("Introduce la clave para iniciar:", type="password", key="p_acceso")
+        clave = st.text_input("Introduce la clave:", type="password", key="p_acceso")
         if clave == "poeta1208":
             st.session_state.auth = True
             st.rerun()
     st.stop()
 
-# Si ya entró pero no ha decidido si borrar o no
 if not st.session_state.decidido:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("<h3 style='text-align: center; color: #fbbf24;'>Poeta ¿Deseas hacer un Máster con 13 nuevos maestros?</h3>", unsafe_allow_html=True)
-        st.write("")
+        st.markdown("<br><h3 style='text-align: center; color: #fbbf24;'>Poeta ¿Deseas hacer un Máster con 13 nuevos maestros?</h3>", unsafe_allow_html=True)
         c_si, c_no = st.columns(2)
-        
-        if c_si.button("✅ SÍ (Empezar de cero)", use_container_width=True):
-            # RESET TOTAL
+        if c_si.button("✅ SÍ (Borrar todo)", use_container_width=True):
             st.session_state.db = {"puntos": [], "nombres": {f"j{i}": f"Maestro {i}" for i in range(1, 14)}}
             with open(FILE, "w") as f: json.dump(st.session_state.db, f)
             st.session_state.decidido = True
             st.rerun()
-            
-        if c_no.button("❌ NO (Mantener nombres)", use_container_width=True):
-            # SE QUEDA COMO ESTÁ
+        if c_no.button("❌ NO (Mantener datos)", use_container_width=True):
             st.session_state.decidido = True
             st.rerun()
     st.stop()
@@ -97,10 +88,9 @@ with st.sidebar:
     if st.button("💾 Guardar"):
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
 
-# --- 7. TABS PRINCIPALES ---
+# --- 7. TABS ---
 r_sel = st.select_slider("RONDA", options=list(range(1, 14)))
-rd = get_ronda(r_sel)
-noms = st.session_state.db["nombres"]
+rd, noms = get_ronda(r_sel), st.session_state.db["nombres"]
 
 t1, t2, t3 = st.tabs(["📝 CARGA", "🖼️ MESAS", "📊 RANKING"])
 
@@ -122,30 +112,38 @@ with t1:
 
 with t2:
     def dibujo(n_m, ids):
-        st.markdown(f'''
-            <div class="mesa-container">
-                <div class="pos-label p-morada" style="grid-column:2; grid-row:1;">{noms[ids[0]]}</div>
-                <div class="pos-label p-verde" style="grid-column:3; grid-row:2;">{noms[ids[3]]}</div>
-                <div class="m-centro">M {n_m}</div>
-                <div class="pos-label p-morada" style="grid-column:2; grid-row:3;">{noms[ids[1]]}</div>
-                <div class="pos-label p-verde" style="grid-column:1; grid-row:2;">{noms[ids[2]]}</div>
-            </div>
-        ''', unsafe_allow_html=True)
+        st.markdown(f'''<div class="mesa-container"><div class="pos-label p-morada" style="grid-column:2; grid-row:1;">{noms[ids[0]]}</div><div class="pos-label p-verde" style="grid-column:3; grid-row:2;">{noms[ids[3]]}</div><div class="m-centro">M {n_m}</div><div class="pos-label p-morada" style="grid-column:2; grid-row:3;">{noms[ids[1]]}</div><div class="pos-label p-verde" style="grid-column:1; grid-row:2;">{noms[ids[2]]}</div></div>''', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    with c1: dibujo(1, rd["m1"])
-    with c2: dibujo(2, rd["m2"])
+    with c1: dibujo(1, rd["m1"]); 
+    with c2: dibujo(2, rd["m2"]); 
     with c3: dibujo(3, rd["m3"])
 
 with t3:
-    ranking = []
-    for k, n in noms.items():
-        jg, dif = 0, 0
+    # LÓGICA DE BAREMO AVANZADO
+    stats = []
+    for kid, n in noms.items():
+        jg, pf, pc = 0, 0, 0
+        vencidos = [] # Para enfrentamiento directo
         for p in st.session_state.db["puntos"]:
-            if k in p["j"][:2]:
-                if p["pa"] > p["pb"]: jg += 1
-                dif += (p["pa"] - p["pb"])
-            elif k in p["j"][2:]:
-                if p["pb"] > p["pa"]: jg += 1
-                dif += (p["pb"] - p["pa"])
-        ranking.append({"Maestro": n, "JG": jg, "DIF": dif})
-    st.table(pd.DataFrame(ranking).sort_values(["JG", "DIF"], ascending=False).reset_index(drop=True))
+            if kid in p["j"][:2]: # Pareja Morada
+                pf += p["pa"]; pc += p["pb"]
+                if p["pa"] > p["pb"]: 
+                    jg += 1; vencidos.extend(p["j"][2:])
+            elif kid in p["j"][2:]: # Pareja Verde
+                pf += p["pb"]; pc += p["pa"]
+                if p["pb"] > p["pa"]: 
+                    jg += 1; vencidos.extend(p["j"][:2])
+        stats.append({"id": kid, "Maestro": n, "JG": jg, "DIF": pf - pc, "PC": pc, "vencidos": vencidos})
+
+    df = pd.DataFrame(stats)
+    
+    # Función para desempate directo (simplificada para ranking general)
+    def criterio_desempate(row):
+        # Generamos una tupla de prioridad: (JG, DIF, -PC) 
+        # El signo menos en PC es porque a MENOR puntaje en contra, MAYOR rango.
+        return (row['JG'], row['DIF'], -row['PC'])
+
+    df['sort_key'] = df.apply(criterio_desempate, axis=1)
+    df = df.sort_values('sort_key', ascending=False).drop(columns=['id', 'vencidos', 'sort_key']).reset_index(drop=True)
+    df.index += 1
+    st.table(df)
