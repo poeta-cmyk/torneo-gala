@@ -3,35 +3,30 @@ import pandas as pd
 import json
 import os
 
-# 1. CONFIGURACIÓN INICIAL
+# --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="GALA DE LOS 13 PRO", layout="wide")
 
-# 2. AUTENTICACIÓN (BLOQUE DE ENTRADA)
-if 'auth' not in st.session_state: 
+# --- 2. CONTROL DE ACCESO (AUTENTICACIÓN) ---
+if 'auth' not in st.session_state:
     st.session_state.auth = False
 
 if not st.session_state.auth:
-    col1, col2, col3 = st.columns([1,2,1])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center;'>🏆 Gala de los 13</h2>", unsafe_allow_html=True)
+        st.markdown("<br><br><h2 style='text-align: center;'>🏆 Gala de los 13</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 20px; font-weight: bold;'>Poeta ¿Deseas hacer un Máster con 13 nuevos maestros?</p>", unsafe_allow_html=True)
         
-        clave = st.text_input("Introduce la clave para iniciar:", type="password")
-        
-        if clave == "poeta1208": 
+        clave = st.text_input("Introduce la clave:", type="password", key="login_key")
+        if clave == "poeta1208":
             st.session_state.auth = True
             st.rerun()
         elif clave != "":
-            st.error("Clave incorrecta, intenta de nuevo.")
-    st.stop() # Solo se detiene si NO está autenticado
+            st.error("Clave incorrecta")
+    st.stop()
 
-# --- TODO LO QUE SIGUE SOLO SE EJECUTA SI LA CLAVE ES CORRECTA ---
-
-# 3. ESTILOS VISUALES
+# --- 3. ESTILOS CSS ---
 st.markdown("""
     <style>
-    .main { background-color: #0f172a; color: white; }
     .mesa-container { 
         display: grid; grid-template-columns: 1fr 1.5fr 1fr; grid-template-rows: 1fr 1.2fr 1fr; 
         gap: 5px; width: 280px; height: 200px; margin: 10px auto; text-align: center; 
@@ -40,30 +35,28 @@ st.markdown("""
         padding: 5px; border-radius: 5px; font-weight: bold; font-size: 13px; color: white; 
         display: flex; align-items: center; justify-content: center; min-height: 40px;
     }
-    .pareja1 { background-color: #6b21a8; border: 1px solid #a855f7; } 
-    .pareja2 { background-color: #065f46; border: 1px solid #10b981; }
-    .mesa-center { 
+    .pareja-morada { background-color: #6b21a8; border: 1px solid #a855f7; } 
+    .pareja-verde { background-color: #065f46; border: 1px solid #10b981; }
+    .mesa-centro { 
         grid-column: 2; grid-row: 2; background: #334155; border: 2px dashed #fbbf24; 
         border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-        color: #fbbf24; font-weight: bold; font-size: 14px; 
+        color: #fbbf24; font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 4. BASE DE DATOS Y PERSISTENCIA
-FILE = "memoria_torneo.json"
-def cargar_datos():
+# --- 4. PERSISTENCIA DE DATOS ---
+FILE = "torneo_data.json"
+def cargar_db():
     if os.path.exists(FILE):
-        try:
-            with open(FILE, "r") as f: return json.load(f)
-        except: pass
+        with open(FILE, "r") as f: return json.load(f)
     return {"puntos": [], "nombres": {f"j{i}": f"Maestro {i}" for i in range(1, 14)}}
 
-if 'datos' not in st.session_state: 
-    st.session_state.datos = cargar_datos()
+if 'db' not in st.session_state:
+    st.session_state.db = cargar_db()
 
-# 5. LÓGICA DE RONDAS (Mantenemos tu estructura de 13 rondas)
-def obtener_ronda(r):
+# --- 5. DEFINICIÓN DE RONDAS ---
+def get_ronda(r):
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
         2: {"desc": "j1", "m1": ["j2", "j13", "j9", "j6"], "m2": ["j3", "j12", "j4", "j11"], "m3": ["j5", "j10", "j7", "j8"]},
@@ -81,69 +74,66 @@ def obtener_ronda(r):
     }
     return rondas.get(r)
 
-# 6. PANEL LATERAL (NOMBRES)
+# --- 6. SIDEBAR: NOMBRES ---
 with st.sidebar:
-    st.header("⚙️ MAESTROS")
+    st.header("Maestros")
     for i in range(1, 14):
-        k = f"j{i}"
-        st.session_state.datos["nombres"][k] = st.text_input(f"Jugador {i}", st.session_state.datos["nombres"][k])
-    if st.button("💾 Guardar Nombres"):
-        with open(FILE, "w") as f: json.dump(st.session_state.datos, f)
-        st.success("¡Nombres actualizados!")
+        id_j = f"j{i}"
+        st.session_state.db["nombres"][id_j] = st.text_input(f"ID {i}", st.session_state.db["nombres"][id_j], key=f"input_{id_j}")
+    if st.button("Guardar Nombres"):
+        with open(FILE, "w") as f: json.dump(st.session_state.db, f)
+        st.success("Nombres Guardados")
 
-# 7. CUERPO PRINCIPAL
-r_actual = st.select_slider("SELECCIONAR RONDA", options=list(range(1, 14)))
-d, n = obtener_ronda(r_actual), st.session_state.datos["nombres"]
+# --- 7. CONTENIDO PRINCIPAL ---
+r_sel = st.select_slider("Ronda del Torneo", options=list(range(1, 14)))
+r_data, nombres = get_ronda(r_sel), st.session_state.db["nombres"]
 
-tabs = st.tabs(["📝 CARGA DE RESULTADOS", "🖼️ VISTA DE MESAS", "📊 TABLA DE POSICIONES"])
+t1, t2, t3 = st.tabs(["Carga", "Mesas", "Ranking"])
 
-with tabs[0]:
-    st.subheader(f"Ronda {r_actual} - Maestro en Reposo: {n[d['desc']]}")
-    def fila_resultado(num, jug):
-        st.markdown(f"**MESA {num}**")
+with t1:
+    st.write(f"Libre: {nombres[r_data['desc']]}")
+    def capturar(n_mesa, ids):
+        st.subheader(f"Mesa {n_mesa}")
         c1, c2 = st.columns(2)
-        pa = c1.number_input(f"Puntos {n[jug[0]]} y {n[jug[1]]}", 0, 200, key=f"pa_{r_actual}_{num}")
-        pb = c2.number_input(f"Puntos {n[jug[3]]} y {n[jug[2]]}", 0, 200, key=f"pb_{r_actual}_{num}")
-        return {"r": r_actual, "j": jug, "pa": pa, "pb": pb}
+        p1 = c1.number_input(f"{nombres[ids[0]]} / {nombres[ids[1]]}", 0, 200, key=f"r{r_sel}m{n_mesa}p1")
+        p2 = c2.number_input(f"{nombres[ids[2]]} / {nombres[ids[3]]}", 0, 200, key=f"r{r_sel}m{n_mesa}p2")
+        return {"r": r_sel, "j": ids, "pa": p1, "pb": p2}
     
-    res = [fila_resultado(1, d["m1"]), fila_resultado(2, d["m2"]), fila_resultado(3, d["m3"])]
-    if st.button("🔔 REGISTRAR RONDA"):
-        st.session_state.datos["puntos"] = [p for p in st.session_state.datos["puntos"] if p["r"] != r_actual]
-        st.session_state.datos["puntos"].extend(res)
-        with open(FILE, "w") as f: json.dump(st.session_state.datos, f)
+    actuales = [capturar(1, r_data["m1"]), capturar(2, r_data["m2"]), capturar(3, r_data["m3"])]
+    if st.button("Registrar Resultados"):
+        st.session_state.db["puntos"] = [p for p in st.session_state.db["puntos"] if p["r"] != r_sel]
+        st.session_state.db["puntos"].extend(actuales)
+        with open(FILE, "w") as f: json.dump(st.session_state.db, f)
         st.balloons()
-        st.success("¡Resultados guardados!")
 
-with tabs[1]:
-    def dibujar_mesa(num, jug):
-        # ORDEN ANTIHORARIO VALIDADO CON IMAGEN image_6e86be.png
+with t2:
+    def mostrar_mesa(n_mesa, ids):
+        # ORDEN ANTIHORARIO ESTRICTO (image_6e86be.png)
         st.markdown(f'''
             <div class="mesa-container">
-                <div class="pos-label pareja1" style="grid-column:2; grid-row:1;">{n[jug[0]]}</div>
-                <div class="pos-label pareja2" style="grid-column:3; grid-row:2;">{n[jug[3]]}</div>
-                <div class="mesa-center">MESA {num}</div>
-                <div class="pos-label pareja1" style="grid-column:2; grid-row:3;">{n[jug[1]]}</div>
-                <div class="pos-label pareja2" style="grid-column:1; grid-row:2;">{n[jug[2]]}</div>
+                <div class="pos-label pareja-morada" style="grid-column:2; grid-row:1;">{nombres[ids[0]]}</div>
+                <div class="pos-label pareja-verde" style="grid-column:3; grid-row:2;">{nombres[ids[3]]}</div>
+                <div class="mesa-centro">M {n_mesa}</div>
+                <div class="pos-label pareja-morada" style="grid-column:2; grid-row:3;">{nombres[ids[1]]}</div>
+                <div class="pos-label pareja-verde" style="grid-column:1; grid-row:2;">{nombres[ids[2]]}</div>
             </div>
         ''', unsafe_allow_html=True)
     
-    m_cols = st.columns(3)
-    for i, m_key in enumerate(["m1", "m2", "m3"]): 
-        with m_cols[i]: dibujar_mesa(i+1, d[m_key])
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m1: mostrar_mesa(1, r_data["m1"])
+    with col_m2: mostrar_mesa(2, r_data["m2"])
+    with col_m3: mostrar_mesa(3, r_data["m3"])
 
-with tabs[2]:
-    stats = []
-    for k, nom in n.items():
-        jg, df = 0, 0
-        for p in st.session_state.datos["puntos"]:
-            if k in p["j"][:2]: # Pareja morada
+with t3:
+    final = []
+    for k, nom in nombres.items():
+        jg, dif = 0, 0
+        for p in st.session_state.db["puntos"]:
+            if k in p["j"][:2]:
                 if p["pa"] > p["pb"]: jg += 1
-                df += (p["pa"] - p["pb"])
-            elif k in p["j"][2:]: # Pareja verde
+                dif += (p["pa"] - p["pb"])
+            elif k in p["j"][2:]:
                 if p["pb"] > p["pa"]: jg += 1
-                df += (p["pb"] - p["pa"])
-        stats.append({'Maestro': nom, 'JG': jg, 'DIF': df})
-    
-    df_rank = pd.DataFrame(stats).sort_values(['JG', 'DIF'], ascending=False).reset_index(drop=True)
-    df_rank.index += 1
-    st.table(df_rank)
+                dif += (p["pb"] - p["pa"])
+        final.append({"Maestro": nom, "JG": jg, "DIF": dif})
+    st.table(pd.DataFrame(final).sort_values(["JG", "DIF"], ascending=False).reset_index(drop=True))
