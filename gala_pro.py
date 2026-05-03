@@ -23,7 +23,7 @@ def cargar_db():
 if 'db' not in st.session_state:
     st.session_state.db = cargar_db()
 
-# --- 3. PREGUNTA DE INICIO (RESTAURADA) ---
+# --- 3. PREGUNTA DE INICIO ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'decidido' not in st.session_state: st.session_state.decidido = False
 
@@ -60,7 +60,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 5. CRONÓMETRO (SIN PARPADEO) ---
+# --- 5. CRONÓMETRO (ESTABLE) ---
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 
 with st.sidebar:
@@ -70,7 +70,7 @@ with st.sidebar:
     if col2.button("⏱️ Reset"): st.session_state.end_time = None
     
     if st.session_state.end_time:
-        st_autorefresh(interval=1000, key="reloj_sidebar")
+        st_autorefresh(interval=1000, key="reloj_global")
         rem = st.session_state.end_time - time.time()
         if rem <= 0:
             st.markdown('<div class="overlay-rojo"><div class="texto-vencido">TIEMPO<br>VENCIDO</div></div>', unsafe_allow_html=True)
@@ -85,11 +85,11 @@ with st.sidebar:
     st.divider()
     for i in range(1, 14):
         k = f"j{i}"
-        st.session_state.db["nombres"][k] = st.text_input(f"ID {i}", st.session_state.db["nombres"][k], key=f"n_{k}")
+        st.session_state.db["nombres"][k] = st.text_input(f"ID {i}", st.session_state.db["nombres"][k], key=f"inp_{k}")
     if st.button("💾 Guardar Nombres"):
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
 
-# --- 6. RONDAS Y CARGA (CON NOMBRES DE MAESTROS) ---
+# --- 6. RONDAS Y CARGA ---
 def get_ronda(r):
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
@@ -118,17 +118,17 @@ with t1:
     def fila_res(n_m, ids):
         st.markdown(f"**MESA {n_m}**")
         c1, c2 = st.columns(2)
-        # AQUÍ SE RESTAURAN LOS NOMBRES EN LOS CUADROS
-        p1 = c1.number_input(f"Morados ({noms[ids[0]]} y {noms[ids[1]]})", 0, 200, key=f"r{r_sel}m{n_m}m")
-        p2 = c2.number_input(f"Verdes ({noms[ids[2]]} y {noms[ids[3]]})", 0, 200, key=f"r{r_sel}m{n_m}v")
+        # Identificación completa de maestros en cada pareja
+        p1 = c1.number_input(f"Pareja Morada ({noms[ids[0]]} / {noms[ids[1]]})", 0, 200, key=f"r{r_sel}m{n_m}m")
+        p2 = c2.number_input(f"Pareja Verde ({noms[ids[2]]} / {noms[ids[3]]})", 0, 200, key=f"r{r_sel}m{n_m}v")
         return {"r": r_sel, "p_m": p1, "p_v": p2, "ids_m": ids[:2], "ids_v": ids[2:]}
     
     res_input = [fila_res(1, rd["m1"]), fila_res(2, rd["m2"]), fila_res(3, rd["m3"])]
-    if st.button("🔔 Guardar Ronda " + str(r_sel), use_container_width=True):
+    if st.button("💾 Registrar Resultados Ronda " + str(r_sel), use_container_width=True):
         st.session_state.db["puntos"] = [p for p in st.session_state.db["puntos"] if p["r"] != r_sel]
         st.session_state.db["puntos"].extend(res_input)
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
-        st.success("Resultados guardados.")
+        st.success("Ronda guardada exitosamente.")
 
 with t2:
     def dibujo(n_m, ids):
@@ -154,4 +154,3 @@ with t3:
     df_rank = pd.DataFrame(stats).sort_values(by=['JG', 'DIF', 'PC'], ascending=[False, False, True]).reset_index(drop=True)
     df_rank.index += 1
     st.table(df_rank)
-    st.link_button("📤 Compartir en WhatsApp", f"https://wa.me/?text={urllib.parse.quote('*RESULTADOS GALA*')}", use_container_width=True)
