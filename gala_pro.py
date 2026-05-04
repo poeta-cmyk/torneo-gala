@@ -87,7 +87,6 @@ with st.sidebar:
         m, s = divmod(int(rem), 60)
         st.markdown(f"<h2 style='text-align: center; color: #fbbf24;'>{m:02d}:{s:02d}</h2>", unsafe_allow_html=True)
         
-        # Advertencia de 5 minutos mejorada
         if 0 < rem <= 300:
             st.warning("⚠️ QUEDAN MENOS DE 5 MINUTOS", icon="🕒")
 
@@ -136,6 +135,7 @@ with t1:
         st.session_state.db["puntos"] = [p for p in st.session_state.db["puntos"] if p["r"] != r_sel]
         st.session_state.db["puntos"].extend(res_input)
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
+        st.balloons() # <--- ¡AQUÍ ESTÁN LOS GLOBOS!
         st.success("Ronda guardada.")
 
 with t2:
@@ -147,7 +147,6 @@ with t2:
     with c2: dibujo(2, rd["m2"])
     with c3: dibujo(3, rd["m3"])
     
-    # WhatsApp Mesas
     texto_mesas = f"*MESAS RONDA {r_sel}*\n"
     for i, m in enumerate(["m1", "m2", "m3"], 1):
         m_ids = rd[m]
@@ -172,7 +171,6 @@ with t3:
     df_rank.index += 1
     st.table(df_rank)
     
-    # WhatsApp Ranking
     txt_rank = "*RANKING ACTUAL GALA*\n"
     for i, row in df_rank.iterrows():
         txt_rank += f"{i}. {row['Maestro']} - JG: {row['JG']} (Dif: {row['DIF']})\n"
