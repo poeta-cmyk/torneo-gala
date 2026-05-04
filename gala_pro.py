@@ -56,11 +56,11 @@ st.markdown("""
     .p-verde { background-color: #065f46; border: 1px solid #10b981; }
     .m-centro { grid-column: 2; grid-row: 2; background: #334155; border: 2px dashed #fbbf24; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-weight: bold; }
     .overlay-rojo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #ff0000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-    .texto-vencido { color: black; font-family: 'Arial Black', sans-serif; font-size: 70px; text-align: center; font-weight: 900; }
+    .texto-vencido { color: black; font-family: 'Arial Black', sans-serif; font-size: 70px; text-align: center; font-weight: 900; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 5. CRONÓMETRO (ESTABLE) ---
+# --- 5. CRONÓMETRO ---
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 
 with st.sidebar:
@@ -72,15 +72,24 @@ with st.sidebar:
     if st.session_state.end_time:
         st_autorefresh(interval=1000, key="reloj_global")
         rem = st.session_state.end_time - time.time()
+        
         if rem <= 0:
-            st.markdown('<div class="overlay-rojo"><div class="texto-vencido">TIEMPO<br>VENCIDO</div></div>', unsafe_allow_html=True)
-            if st.button("🔄 REINICIAR"):
+            st.markdown(f'''
+                <div class="overlay-rojo">
+                    <div class="texto-vencido">TIEMPO<br>VENCIDO</div>
+                </div>
+            ''', unsafe_allow_html=True)
+            if st.button("🔄 REGRESAR AL TORNEO", use_container_width=True):
                 st.session_state.end_time = None
                 st.rerun()
             st.stop()
+            
         m, s = divmod(int(rem), 60)
         st.markdown(f"<h2 style='text-align: center; color: #fbbf24;'>{m:02d}:{s:02d}</h2>", unsafe_allow_html=True)
-        if rem <= 300: st.toast("⚠️ QUEDAN 5 MINUTOS", icon="🔔")
+        
+        # Advertencia de 5 minutos mejorada
+        if 0 < rem <= 300:
+            st.warning("⚠️ QUEDAN MENOS DE 5 MINUTOS", icon="🕒")
 
     st.divider()
     for i in range(1, 14):
@@ -89,7 +98,7 @@ with st.sidebar:
     if st.button("💾 Guardar Nombres"):
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
 
-# --- 6. RONDAS Y CARGA ---
+# --- 6. LÓGICA DE RONDAS ---
 def get_ronda(r):
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
@@ -118,25 +127,33 @@ with t1:
     def fila_res(n_m, ids):
         st.markdown(f"**MESA {n_m}**")
         c1, c2 = st.columns(2)
-        # Identificación completa de maestros en cada pareja
-        p1 = c1.number_input(f"Pareja Morada ({noms[ids[0]]} / {noms[ids[1]]})", 0, 200, key=f"r{r_sel}m{n_m}m")
-        p2 = c2.number_input(f"Pareja Verde ({noms[ids[2]]} / {noms[ids[3]]})", 0, 200, key=f"r{r_sel}m{n_m}v")
+        p1 = c1.number_input(f"Morados ({noms[ids[0]]} / {noms[ids[1]]})", 0, 200, key=f"r{r_sel}m{n_m}m")
+        p2 = c2.number_input(f"Verdes ({noms[ids[2]]} / {noms[ids[3]]})", 0, 200, key=f"r{r_sel}m{n_m}v")
         return {"r": r_sel, "p_m": p1, "p_v": p2, "ids_m": ids[:2], "ids_v": ids[2:]}
     
     res_input = [fila_res(1, rd["m1"]), fila_res(2, rd["m2"]), fila_res(3, rd["m3"])]
-    if st.button("💾 Registrar Resultados Ronda " + str(r_sel), use_container_width=True):
+    if st.button("💾 Guardar Ronda " + str(r_sel), use_container_width=True):
         st.session_state.db["puntos"] = [p for p in st.session_state.db["puntos"] if p["r"] != r_sel]
         st.session_state.db["puntos"].extend(res_input)
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
-        st.success("Ronda guardada exitosamente.")
+        st.success("Ronda guardada.")
 
 with t2:
     def dibujo(n_m, ids):
         st.markdown(f'''<div class="mesa-container"><div class="pos-label p-morada" style="grid-column:2; grid-row:1;">{noms[ids[0]]}</div><div class="pos-label p-verde" style="grid-column:3; grid-row:2;">{noms[ids[3]]}</div><div class="m-centro">M {n_m}</div><div class="pos-label p-morada" style="grid-column:2; grid-row:3;">{noms[ids[1]]}</div><div class="pos-label p-verde" style="grid-column:1; grid-row:2;">{noms[ids[2]]}</div></div>''', unsafe_allow_html=True)
+    
     c1, c2, c3 = st.columns(3)
     with c1: dibujo(1, rd["m1"])
     with c2: dibujo(2, rd["m2"])
     with c3: dibujo(3, rd["m3"])
+    
+    # WhatsApp Mesas
+    texto_mesas = f"*MESAS RONDA {r_sel}*\n"
+    for i, m in enumerate(["m1", "m2", "m3"], 1):
+        m_ids = rd[m]
+        texto_mesas += f"Mesa {i}: {noms[m_ids[0]]}/{noms[m_ids[1]]} vs {noms[m_ids[2]]}/{noms[m_ids[3]]}\n"
+    
+    st.link_button("📤 Compartir Mesas por WhatsApp", f"https://wa.me/?text={urllib.parse.quote(texto_mesas)}", use_container_width=True)
 
 with t3:
     stats = []
@@ -154,3 +171,10 @@ with t3:
     df_rank = pd.DataFrame(stats).sort_values(by=['JG', 'DIF', 'PC'], ascending=[False, False, True]).reset_index(drop=True)
     df_rank.index += 1
     st.table(df_rank)
+    
+    # WhatsApp Ranking
+    txt_rank = "*RANKING ACTUAL GALA*\n"
+    for i, row in df_rank.iterrows():
+        txt_rank += f"{i}. {row['Maestro']} - JG: {row['JG']} (Dif: {row['DIF']})\n"
+    
+    st.link_button("📤 Compartir Ranking por WhatsApp", f"https://wa.me/?text={urllib.parse.quote(txt_rank)}", use_container_width=True)
