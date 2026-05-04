@@ -56,13 +56,27 @@ st.markdown("""
     .p-verde { background-color: #065f46; border: 1px solid #10b981; }
     .m-centro { grid-column: 2; grid-row: 2; background: #334155; border: 2px dashed #fbbf24; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-weight: bold; }
     
-    /* Capa de Tiempo Vencido */
-    .overlay-rojo { 
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-        background-color: red; z-index: 999999; 
-        display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    /* Alerta Roja de 5 Minutos */
+    .alerta-cinco {
+        background-color: #ff0000;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 20px;
+        border: 2px solid white;
+        margin-bottom: 20px;
+        animation: blinker 1.5s linear infinite;
     }
-    .texto-vencido { color: black; font-family: 'Arial Black', sans-serif; font-size: 80px; text-align: center; font-weight: 900; line-height: 1; margin-bottom: 40px; }
+    @keyframes blinker { 50% { opacity: 0.7; } }
+
+    /* Pantalla Final */
+    .overlay-vencido {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: red; z-index: 9999;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -71,8 +85,11 @@ if 'end_time' not in st.session_state: st.session_state.end_time = None
 
 with st.sidebar:
     st.header("⏳ Cronómetro")
+    # Nueva función: Usted elige los minutos
+    minutos_ajuste = st.number_input("Duración (min)", 1, 60, 35)
+    
     col1, col2 = st.columns(2)
-    if col1.button("▶️ Iniciar"): st.session_state.end_time = time.time() + 35 * 60
+    if col1.button("▶️ Iniciar"): st.session_state.end_time = time.time() + minutos_ajuste * 60
     if col2.button("⏱️ Reset"): st.session_state.end_time = None
     
     if st.session_state.end_time:
@@ -80,21 +97,18 @@ with st.sidebar:
         rem = st.session_state.end_time - time.time()
         
         if rem <= 0:
-            # MOSTRAR EL LETRERO Y EL BOTÓN ADENTRO PARA QUE NO SE TAPE
-            placeholder = st.empty()
-            with placeholder.container():
-                st.markdown('<div class="overlay-rojo"><div class="texto-vencido">TIEMPO<br>VENCIDO</div></div>', unsafe_allow_html=True)
-                # El botón ahora está "por encima" de lo rojo
-                if st.button("🔄 REGRESAR AL TORNEO", key="btn_regreso", use_container_width=True):
-                    st.session_state.end_time = None
-                    st.rerun()
+            st.markdown('<div class="overlay-vencido"><h1 style="color:black; font-size:80px; text-align:center; font-family:Arial Black;">TIEMPO<br>VENCIDO</h1></div>', unsafe_allow_html=True)
+            if st.button("🔄 REGRESAR AL TORNEO", use_container_width=True):
+                st.session_state.end_time = None
+                st.rerun()
             st.stop()
             
         m, s = divmod(int(rem), 60)
         st.markdown(f"<h2 style='text-align: center; color: #fbbf24;'>{m:02d}:{s:02d}</h2>", unsafe_allow_html=True)
         
+        # ADVERTENCIA ROJA CUANDO FALTAN 5 MINUTOS
         if 0 < rem <= 300:
-            st.warning("⚠️ QUEDAN MENOS DE 5 MINUTOS", icon="🕒")
+            st.markdown('<div class="alerta-cinco">⚠️ ATENCIÓN: QUEDAN MENOS DE 5 MINUTOS</div>', unsafe_allow_html=True)
 
     st.divider()
     for i in range(1, 14):
@@ -103,7 +117,7 @@ with st.sidebar:
     if st.button("💾 Guardar Nombres"):
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
 
-# --- 6. LÓGICA DE RONDAS ---
+# --- 6. LÓGICA DE RONDAS (EL RESTO DEL CÓDIGO SE MANTIENE IGUAL) ---
 def get_ronda(r):
     rondas = {
         1: {"desc": "j13", "m1": ["j1", "j12", "j8", "j5"], "m2": ["j2", "j11", "j3", "j10"], "m3": ["j4", "j9", "j6", "j7"]},
@@ -137,7 +151,7 @@ with t1:
         return {"r": r_sel, "p_m": p1, "p_v": p2, "ids_m": ids[:2], "ids_v": ids[2:]}
     
     res_input = [fila_res(1, rd["m1"]), fila_res(2, rd["m2"]), fila_res(3, rd["m3"])]
-    if st.button("💾 Guardar Ronda " + str(r_sel), use_container_width=True):
+    if st.button("💾 Guardar Ronda " + str(r_sel), key="btn_save", use_container_width=True):
         st.session_state.db["puntos"] = [p for p in st.session_state.db["puntos"] if p["r"] != r_sel]
         st.session_state.db["puntos"].extend(res_input)
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
