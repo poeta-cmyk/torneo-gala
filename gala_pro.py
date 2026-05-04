@@ -23,7 +23,7 @@ def cargar_db():
 if 'db' not in st.session_state:
     st.session_state.db = cargar_db()
 
-# --- 3. PREGUNTA DE INICIO ---
+# --- 3. ACCESO Y REINICIO ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'decidido' not in st.session_state: st.session_state.decidido = False
 
@@ -55,8 +55,14 @@ st.markdown("""
     .p-morada { background-color: #6b21a8; border: 1px solid #a855f7; } 
     .p-verde { background-color: #065f46; border: 1px solid #10b981; }
     .m-centro { grid-column: 2; grid-row: 2; background: #334155; border: 2px dashed #fbbf24; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-weight: bold; }
-    .overlay-rojo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #ff0000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-    .texto-vencido { color: black; font-family: 'Arial Black', sans-serif; font-size: 70px; text-align: center; font-weight: 900; margin-bottom: 20px; }
+    
+    /* Capa de Tiempo Vencido */
+    .overlay-rojo { 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background-color: red; z-index: 999999; 
+        display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    }
+    .texto-vencido { color: black; font-family: 'Arial Black', sans-serif; font-size: 80px; text-align: center; font-weight: 900; line-height: 1; margin-bottom: 40px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -74,14 +80,14 @@ with st.sidebar:
         rem = st.session_state.end_time - time.time()
         
         if rem <= 0:
-            st.markdown(f'''
-                <div class="overlay-rojo">
-                    <div class="texto-vencido">TIEMPO<br>VENCIDO</div>
-                </div>
-            ''', unsafe_allow_html=True)
-            if st.button("🔄 REGRESAR AL TORNEO", use_container_width=True):
-                st.session_state.end_time = None
-                st.rerun()
+            # MOSTRAR EL LETRERO Y EL BOTÓN ADENTRO PARA QUE NO SE TAPE
+            placeholder = st.empty()
+            with placeholder.container():
+                st.markdown('<div class="overlay-rojo"><div class="texto-vencido">TIEMPO<br>VENCIDO</div></div>', unsafe_allow_html=True)
+                # El botón ahora está "por encima" de lo rojo
+                if st.button("🔄 REGRESAR AL TORNEO", key="btn_regreso", use_container_width=True):
+                    st.session_state.end_time = None
+                    st.rerun()
             st.stop()
             
         m, s = divmod(int(rem), 60)
@@ -135,7 +141,7 @@ with t1:
         st.session_state.db["puntos"] = [p for p in st.session_state.db["puntos"] if p["r"] != r_sel]
         st.session_state.db["puntos"].extend(res_input)
         with open(FILE, "w") as f: json.dump(st.session_state.db, f)
-        st.balloons() # <--- ¡AQUÍ ESTÁN LOS GLOBOS!
+        st.balloons()
         st.success("Ronda guardada.")
 
 with t2:
